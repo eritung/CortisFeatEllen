@@ -116,7 +116,27 @@ body{background:var(--bg);min-height:100dvh;font-family:'Space Mono',monospace;c
 }
 .vf-status{font-size:9px;color:var(--muted);letter-spacing:.08em;margin-bottom:.5rem;text-align:center}
 .vf-btns{display:flex;gap:8px}
-.vf-btns .btn{margin-bottom:0;flex:1}
+/* Override .btn defaults inside vf-bar so they're clearly visible */
+.vf-btns .btn{
+  margin-bottom:0;flex:1;
+  background:#222;
+  border:1.5px solid #555;
+  color:#e8e0d4;
+  font-size:16px;
+}
+.vf-btns .btn.primary{
+  background:#e8e0d4;
+  color:#0d0d0d;
+  border-color:#e8e0d4;
+  font-size:16px;
+}
+#flipBtn{
+  flex:0 0 auto;width:auto;padding:14px 20px;
+  background:#222;
+  border:1.5px solid #fff;
+  color:#fff;
+  font-size:22px;
+}
 </style>
 </head>
 <body>
@@ -167,9 +187,9 @@ body{background:var(--bg);min-height:100dvh;font-family:'Space Mono',monospace;c
   <div class="vf-bar">
     <div class="vf-status" id="vfStatus">按 SNAP 開始倒數</div>
     <div class="vf-btns">
-      <button class="btn primary" id="snapBtn"><i class="ti ti-aperture"></i> SNAP</button>
-      <button class="btn" id="flipBtn" style="flex:0 0 auto;width:auto;padding:14px 16px" title="切換相機"><i class="ti ti-camera-rotate"></i></button>
-      <button class="btn" id="closeCamBtn">CANCEL</button>
+      <button class="btn primary" id="snapBtn">⏺ SNAP</button>
+      <button class="btn" id="flipBtn" title="切換相機">⟳</button>
+      <button class="btn" id="closeCamBtn">✕ CANCEL</button>
     </div>
   </div>
   <canvas id="snapCanvas" style="display:none"></canvas>
