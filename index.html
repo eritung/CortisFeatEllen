@@ -168,6 +168,7 @@ body{background:var(--bg);min-height:100dvh;font-family:'Space Mono',monospace;c
     <div class="vf-status" id="vfStatus">按 SNAP 開始倒數</div>
     <div class="vf-btns">
       <button class="btn primary" id="snapBtn"><i class="ti ti-aperture"></i> SNAP</button>
+      <button class="btn" id="flipBtn" style="flex:0 0 auto;width:auto;padding:14px 16px" title="切換相機"><i class="ti ti-camera-rotate"></i></button>
       <button class="btn" id="closeCamBtn">CANCEL</button>
     </div>
   </div>
@@ -210,6 +211,7 @@ let activeFrame = FRAMES[0];
 const photos = Array(4).fill(null);
 let shooting = false;
 let cdTimer = null;
+let facingMode = 'user'; // 'user' = front, 'environment' = back
 
 // HiDPI main canvas
 const canvas = document.getElementById('mainCanvas');
@@ -415,8 +417,10 @@ function snapSlot(slot) {
   sc.width = s.w * 2; sc.height = s.h * 2;
   const sctx = sc.getContext('2d');
   sctx.save();
-  sctx.translate(sc.width, 0);
-  sctx.scale(-1, 1); // undo CSS mirror
+  if (facingMode === 'user') {
+    sctx.translate(sc.width, 0);
+    sctx.scale(-1, 1); // undo CSS mirror for front camera
+  }
   sctx.drawImage(vid, cx, cy, cw, ch, 0, 0, sc.width, sc.height);
   sctx.restore();
 
@@ -439,6 +443,7 @@ function snapSlot(slot) {
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function applySlotUI(slot) {
+  _currentSlot = slot;
   document.getElementById('vfSlotLbl').textContent = 'SLOT ' + (slot + 1) + ' / 4';
   document.getElementById('vfStatus').textContent = '按 SNAP 開始倒數';
   updateDots(slot, slot);
@@ -460,25 +465,53 @@ async function runSequence() {
   closeCamera();
 }
 
+// Start / restart camera stream
+async function startCamera() {
+  if (window._cs) { window._cs.getTracks().forEach(t => t.stop()); window._cs = null; }
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+    audio: false
+  });
+  const vid = document.getElementById('camVideo');
+  vid.srcObject = stream;
+  window._cs = stream;
+  // Mirror only front camera
+  vid.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'none';
+  await vid.play();
+}
+
 // Open camera
 document.getElementById('shootBtn').addEventListener('click', async () => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false
-    });
-    const vid = document.getElementById('camVideo');
-    vid.srcObject = stream;
-    window._cs = stream;
+    facingMode = 'user';
     buildDots();
     document.getElementById('snapBtn').disabled = false;
     document.getElementById('camModal').classList.add('open');
-    await vid.play();
+    await startCamera();
     applySlotUI(0);
   } catch(e) {
     alert('無法開啟相機：' + (e.message || e));
   }
 });
+
+// Flip camera
+document.getElementById('flipBtn').addEventListener('click', async () => {
+  if (shooting) return;
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  try {
+    await startCamera();
+    // Redraw overlay after stream restarts
+    const slot = getCurrentSlot();
+    applySlotUI(slot);
+  } catch(e) {
+    // fallback: revert
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+  }
+});
+
+// Track which slot we're on
+let _currentSlot = 0;
+function getCurrentSlot() { return _currentSlot; }
 
 document.getElementById('snapBtn').addEventListener('click', () => {
   if (!shooting) runSequence();
